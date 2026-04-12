@@ -31,3 +31,5 @@ tqdm
 
 # Logging (optional but recommended)
 loguru
+
+#uvicorn main:app --reload
