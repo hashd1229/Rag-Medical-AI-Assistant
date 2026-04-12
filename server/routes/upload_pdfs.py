@@ -22,7 +22,7 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from io import BytesIO
 import pypdf
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
 import pinecone
@@ -47,11 +47,11 @@ async def upload_pdfs(files: list[UploadFile] = File(...)):
         all_metadatas = []
         
         for file in files:
-            # Read PDF into memory (no disk writing!)
+            # Read PDF into memory directly (no helper function)
             contents = await file.read()
             pdf_file = BytesIO(contents)
             
-            # Extract text from PDF
+            # Extract text
             pdf_reader = pypdf.PdfReader(pdf_file)
             text = ""
             for page in pdf_reader.pages:
@@ -73,8 +73,7 @@ async def upload_pdfs(files: list[UploadFile] = File(...)):
                 all_texts.append(chunk)
                 all_metadatas.append({
                     "source": file.filename,
-                    "chunk_index": i,
-                    "total_chunks": len(chunks)
+                    "chunk_index": i
                 })
         
         if not all_texts:
