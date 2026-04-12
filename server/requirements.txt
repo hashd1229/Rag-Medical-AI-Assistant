@@ -10,6 +10,7 @@ langchain-core
 langchain-groq
 langchain-pinecone
 langchain-openai
+langchain-text-splitters
 # Vectorstore
 # chromadb
 pinecone
