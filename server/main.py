@@ -28,10 +28,3 @@ app.middleware("http")(catch_exception_middleware)
 app.include_router(upload_router)
 # 2. asking query
 app.include_router(ask_router)
-@app.get("/kaithhealthcheck")
-async def health_check():
-    return {"status": "ok"}
-
-@app.get("/kaithheathcheck")  # Note the typo - Leapcell uses both
-async def health_check_typo():
-    return {"status": "ok"}
