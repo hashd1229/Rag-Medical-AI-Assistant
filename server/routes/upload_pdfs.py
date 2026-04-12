@@ -21,10 +21,10 @@
 
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from io import BytesIO
-import pypdf  # Use pypdf instead of PyPDF2
+import pypdf
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_openai import OpenAIEmbeddings
-from langchain_pinecone import PineconeVectorStore  # Updated import
+from langchain_pinecone import PineconeVectorStore
 import pinecone
 import os
 from dotenv import load_dotenv
@@ -34,29 +34,24 @@ load_dotenv()
 router = APIRouter()
 
 # Initialize Pinecone
-pc = pinecone.Pinecone(
-    api_key=os.getenv("PINECONE_API_KEY"),
-    environment=os.getenv("PINECONE_ENVIRONMENT")
-)
+pc = pinecone.Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
 
 INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "medical-assistant")
 embeddings = OpenAIEmbeddings()
 
 @router.post("/upload")
 async def upload_pdfs(files: list[UploadFile] = File(...)):
-    """
-    Upload PDFs and add to vector store without saving to disk
-    """
+    """Process PDFs in memory - NO FILE WRITING"""
     try:
         all_texts = []
         all_metadatas = []
         
         for file in files:
-            # Read PDF into memory
+            # Read PDF into memory (no disk writing!)
             contents = await file.read()
             pdf_file = BytesIO(contents)
             
-            # Extract text from PDF using pypdf
+            # Extract text from PDF
             pdf_reader = pypdf.PdfReader(pdf_file)
             text = ""
             for page in pdf_reader.pages:
@@ -71,11 +66,9 @@ async def upload_pdfs(files: list[UploadFile] = File(...)):
             text_splitter = RecursiveCharacterTextSplitter(
                 chunk_size=1000,
                 chunk_overlap=200,
-                separators=["\n\n", "\n", " ", ""]
             )
             chunks = text_splitter.split_text(text)
             
-            # Add to collections
             for i, chunk in enumerate(chunks):
                 all_texts.append(chunk)
                 all_metadatas.append({
@@ -85,19 +78,33 @@ async def upload_pdfs(files: list[UploadFile] = File(...)):
                 })
         
         if not all_texts:
-            raise HTTPException(status_code=400, detail="No text could be extracted from the uploaded PDFs")
+            raise HTTPException(status_code=400, detail="No text could be extracted")
         
-        # Add to Pinecone vector store
+        # Check if index exists
+        existing_indexes = [index.name for index in pc.list_indexes()]
+        
+        if INDEX_NAME not in existing_indexes:
+            pc.create_index(
+                name=INDEX_NAME,
+                dimension=1536,
+                metric="cosine",
+                spec=pinecone.ServerlessSpec(
+                    cloud="aws",
+                    region="us-east-1"
+                )
+            )
+        
+        # Add to vector store
         vector_store = PineconeVectorStore.from_texts(
             texts=all_texts,
             embedding=embeddings,
-            index_name=INDEX_NAME
+            index_name=INDEX_NAME,
+            metadatas=all_metadatas
         )
         
         return {
             "message": f"Successfully processed {len(files)} file(s)",
-            "chunks_created": len(all_texts),
-            "files_processed": len(files)
+            "chunks_created": len(all_texts)
         }
         
     except Exception as e:
