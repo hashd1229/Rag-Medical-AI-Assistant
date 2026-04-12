@@ -23,7 +23,7 @@ from fastapi import APIRouter, UploadFile, File, HTTPException
 from io import BytesIO
 import pypdf
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_openai import OpenAIEmbeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_pinecone import PineconeVectorStore
 import pinecone
 import os
@@ -45,7 +45,7 @@ if not PINECONE_API_KEY:
 pc = pinecone.Pinecone(api_key=PINECONE_API_KEY)
 
 # Initialize embeddings
-embeddings = OpenAIEmbeddings()
+embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=os.getenv("GOOGLE_API_KEY"))
 
 @router.post("/upload")
 async def upload_pdfs(files: list[UploadFile] = File(...)):
