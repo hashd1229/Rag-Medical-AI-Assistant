@@ -74,4 +74,3 @@ def load_vectorstore(uploaded_files):
 
         print(f"✅ Upload complete for {file_path}")
 
-server/modules/load_vectorstore.py
