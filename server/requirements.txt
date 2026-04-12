@@ -8,7 +8,8 @@ langchain
 langchain-community
 langchain-core
 langchain-groq
-
+langchain-pinecone
+langchain-openai
 # Vectorstore
 # chromadb
 pinecone
