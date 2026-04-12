@@ -34,3 +34,12 @@ tqdm
 loguru
 
 #uvicorn main:app --reload
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pypdf==3.17.4
+python-multipart==0.0.6
+python-dotenv==1.0.0
+pinecone-client==5.0.1
+langchain-text-splitters==0.2.4
+langchain-google-genai==4.2.0
+tqdm==4.66.1
