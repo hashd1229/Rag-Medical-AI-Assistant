@@ -18,7 +18,7 @@ PINECONE_INDEX_NAME = "medicalindex"
 
 os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
 
-# ✅ Initialize Pinecone
+#  Initialize Pinecone
 pc = Pinecone(api_key=PINECONE_API_KEY)
 spec = ServerlessSpec(cloud="aws", region=PINECONE_ENV)
 
@@ -36,8 +36,6 @@ if PINECONE_INDEX_NAME not in existing_indexes:
 
 index = pc.Index(PINECONE_INDEX_NAME)
 
-
-# ✅ MAIN FUNCTION (ASYNC + FIXED STORAGE)
 async def load_vectorstore(uploaded_files):
     embed_model = GoogleGenerativeAIEmbeddings(
         model="models/gemini-embedding-001"
@@ -45,7 +43,7 @@ async def load_vectorstore(uploaded_files):
 
     file_paths = []
 
-    # 🔥 STEP 1: Save PDFs temporarily (SAFE)
+
     for file in uploaded_files:
         contents = await file.read()
 
@@ -55,7 +53,7 @@ async def load_vectorstore(uploaded_files):
 
         file_paths.append(tmp_path)
 
-    # 🔥 STEP 2: Process PDFs
+    #  Process PDFs
     for file_path in file_paths:
         loader = PyPDFLoader(file_path)
         documents = loader.load()
@@ -67,15 +65,24 @@ async def load_vectorstore(uploaded_files):
         chunks = splitter.split_documents(documents)
 
         texts = [chunk.page_content for chunk in chunks]
-        metadatas = [chunk.metadata for chunk in chunks]
+        metadatas = [
+            {**chunk.metadata, "text": chunk.page_content}  # Add text content to metadata
+            for chunk in chunks
+        ]
         ids = [f"{Path(file_path).stem}-{i}" for i in range(len(chunks))]
 
         print(f"🔍 Embedding {len(texts)} chunks...")
         embeddings = embed_model.embed_documents(texts)
 
         print("📤 Uploading to Pinecone...")
+        # Format vectors for Pinecone: [(id, embedding, metadata), ...]
+        vectors_to_upsert = [
+            (id_, emb, meta) 
+            for id_, emb, meta in zip(ids, embeddings, metadatas)
+        ]
+        
         with tqdm(total=len(embeddings), desc="Upserting to Pinecone") as progress:
-            index.upsert(vectors=zip(ids, embeddings, metadatas))
+            index.upsert(vectors=vectors_to_upsert)
             progress.update(len(embeddings))
 
         print(f"✅ Upload complete for {file_path}")
